@@ -11,7 +11,7 @@ interface Field {
   label: string;
   required: boolean;
   options?: string[];
-  value: string
+  value: string;
 }
 
 interface Theme {
@@ -28,6 +28,8 @@ function Form() {
     fontFamily: 'sans-serif',
     fontSize: 'medium',
   });
+  const [errors, setErrors] = useState<string[]>([]); // To store error messages
+
   const handleUpdateField = (id: string, value: string) => {
     setFields((prevFields) =>
       prevFields.map((field) =>
@@ -35,7 +37,7 @@ function Form() {
       )
     );
   };
-  console.log(fields)
+
   const handleDragStart = (type: string) => {
     const newField: Field = {
       id: Date.now().toString(),
@@ -62,10 +64,42 @@ function Form() {
         return '16px';
     }
   };
+
   const handleAddField = () => {
-    toast.success("The data saved successfully!")
-    setFields([])
-  }
+    const validationErrors: string[] = [];
+  
+    fields.forEach((field) => {
+      if (field.required && !field.value) {
+        validationErrors.push(`${field.label} is required`);
+      }
+  
+      // Email validation
+      if (field.type === 'email' && field.value) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(field.value)) {
+          validationErrors.push(`${field.label} must be a valid email`);
+        }
+      }
+  
+      // Number validation
+      if (field.type === 'number' && field.value) {
+        if (isNaN(Number(field.value))) {
+          validationErrors.push(`${field.label} must be a number`);
+        }
+      }
+    });
+  
+    if (validationErrors.length > 0) {
+      setErrors(validationErrors);
+    } else {
+      localStorage.setItem('formData',JSON.stringify(fields)); 
+      toast.success("The data saved succesfully!");
+      setErrors([]);
+      setFields([]);
+    }
+  };
+  
+
   return (
     <div
       style={{
@@ -114,10 +148,21 @@ function Form() {
                     key={field.id}
                     field={field}
                     isPreview={isPreview}
-                    onUpdate = {handleUpdateField}
+                    onUpdate={handleUpdateField}
                     onDelete={handleDeleteField}
                   />
                 ))}
+
+                {errors.length > 0 && (
+                  <div className="text-red-500">
+                    <ul>
+                      {errors.map((error, index) => (
+                        <li key={index}>{error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 {fields.length > 0 && (
                   <button
                     type="submit"
@@ -128,6 +173,7 @@ function Form() {
                     Submit
                   </button>
                 )}
+
                 {fields.length === 0 && !isPreview && (
                   <div className="text-center py-8 text-gray-500">
                     Drag and drop components from the left panel to build your form
